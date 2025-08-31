@@ -35,7 +35,7 @@ local getnamecallmethod = clonef(getnamecallmethod);
 local blocked = options.BlockedURLs;
 local enabled = true;
 local reqfunc = request;
-local libtype = "request";
+local libtype = "";
 local hooked = {};
 local proxied = {};
 local methods = {
@@ -118,14 +118,14 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
     end;
 
     if not options.ShowResponse then
-        printf("%s.request(%s)\n\n", libtype, Serializer.Serialize(RequestData));
+        printf("request(%s)\n\n", Serializer.Serialize(RequestData));
         return __request(req);
     end;
 
     local t = crunning();
     cwrap(function() 
         if RequestData.Url and blocked[RequestData.Url] then
-            printf("%s.request(%s) -- blocked url\n\n", libtype, Serializer.Serialize(RequestData));
+            printf("request(%s) -- blocked url\n\n", Serializer.Serialize(RequestData));
             return cresume(t, {});
         end;
 
@@ -172,7 +172,7 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
             end;
         end;
         
-        printf("%s.request(%s)%s%s\n\nResponse Data: %s\n\n", libtype, Serializer.Serialize(RequestData), timingInfo, sizeInfo, Serializer.Serialize(BackupData));
+        printf("request(%s)%s%s\n\nResponse Data: %s\n\n", Serializer.Serialize(RequestData), timingInfo, sizeInfo, Serializer.Serialize(BackupData));
         cresume(t, hooked[RequestData.Url] and hooked[RequestData.Url](ResponseData) or ResponseData);
     end)();
     return cyield();
