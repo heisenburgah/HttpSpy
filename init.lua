@@ -42,7 +42,6 @@ local methods = {
     HttpGet = true,
     HttpGetAsync = true,
     GetObjects = true,
-    HttpPost = true,
     HttpPostAsync = true
 }
 
