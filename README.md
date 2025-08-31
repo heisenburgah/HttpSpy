@@ -8,7 +8,7 @@ This project is no longer maintained (and won't be until I finish some other stu
 ## Usage
 > Be sure to execute the HttpSpy before the target script!
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NotDSF/HttpSpy/main/init.lua"))({
+loadstring(game:HttpGet("https://raw.githubusercontent.com/heisenburgah/HttpSpy/refs/heads/main/init.lua"))({
     AutoDecode = true, -- Automatically decodes JSON
     Highlighting = true, -- Highlights the output
     SaveLogs = true, -- Save logs to a text file
