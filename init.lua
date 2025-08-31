@@ -42,6 +42,7 @@ local methods = {
     HttpGet = true,
     HttpGetAsync = true,
     GetObjects = true,
+    HttpPostAsync = true
 }
 
 Serializer.UpdateConfig({ highlighting = options.Highlighting });
