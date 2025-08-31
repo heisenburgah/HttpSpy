@@ -6,7 +6,7 @@ if rconsoleprint then
     rconsoleprint("https://eleutheri.com - #1 Whitelist Service\n\n")
 end;
 
-assert(syn or http, "Unsupport exploit (should support syn.request or http.request)");
+assert(request, "Unsupported exploit (should support request)");
 
 local options = ({...})[1] or { AutoDecode = true, Highlighting = true, SaveLogs = true, CLICommands = true, ShowResponse = true, BlockedURLs = {}, API = true };
 local version = "v1.1.3";
@@ -34,16 +34,16 @@ local Error = clonef(error);
 local getnamecallmethod = clonef(getnamecallmethod);
 local blocked = options.BlockedURLs;
 local enabled = true;
-local reqfunc = (syn or http).request;
-local libtype = syn and "syn" or "http";
+local reqfunc = request;
+local libtype = "request";
 local hooked = {};
 local proxied = {};
 local methods = {
-    HttpGet = not syn,
-    HttpGetAsync = not syn,
+    HttpGet = true,
+    HttpGetAsync = true,
     GetObjects = true,
-    HttpPost = not syn,
-    HttpPostAsync = not syn
+    HttpPost = true,
+    HttpPostAsync = true
 }
 
 Serializer.UpdateConfig({ highlighting = options.Highlighting });
@@ -146,32 +146,6 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
     return cyield();
 end));
 
-if request then
-    replaceclosure(request, reqfunc);
-end;
-
-if syn and syn.websocket then
-    local WsConnect, WsBackup = debug.getupvalue(syn.websocket.connect, 1);
-    WsBackup = hookfunction(WsConnect, function(...) 
-        printf("syn.websocket.connect(%s)\n\n", Serializer.FormatArguments(...));
-        return WsBackup(...);
-    end);
-end;
-
--- I already know this will make some people mad :troll:
-if syn and syn.websocket then
-    local HttpGet;
-    HttpGet = hookfunction(getupvalue(ConstantScan("ZeZLm2hpvGJrD6OP8A3aEszPNEw8OxGb"), 2), function(self, ...) 
-        printf("game.HttpGet(game, %s)\n\n", Serializer.FormatArguments(...));
-        return HttpGet(self, ...);
-    end);
-
-    local HttpPost;
-    HttpPost = hookfunction(getupvalue(ConstantScan("gpGXBVpEoOOktZWoYECgAY31o0BlhOue"), 2), function(self, ...) 
-        printf("game.HttpPost(game, %s)\n\n", Serializer.FormatArguments(...));
-        return HttpPost(self, ...);
-    end);
-end
 
 for method, enabled in Pairs(methods) do
     if enabled then
@@ -194,7 +168,7 @@ if not options.API then return end;
 local API = {};
 API.OnRequest = OnRequest.Event;
 
-function API:HookSynRequest(url, hook) 
+function API:HookRequest(url, hook) 
     hooked[url] = hook;
 end;
 
@@ -209,7 +183,7 @@ function API:RemoveProxy(host)
     proxied[host] = nil;
 end;
 
-function API:UnHookSynRequest(url) 
+function API:UnHookRequest(url) 
     if not hooked[url] then
         error("url isn't hooked", 0);
     end;
@@ -225,4 +199,3 @@ function API:WhitelistUrl(url)
 end;
 
 return API;
- 
