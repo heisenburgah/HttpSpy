@@ -1,22 +1,22 @@
 --[[
-    HttpSpy v1.1.3
+    HttpSpy v2
 ]]
 
 if rconsoleprint then
-    rconsoleprint("https://eleutheri.com - #1 Whitelist Service\n\n")
+    rconsoleprint("\27[95m[>] \27[0mhttps://hydroxide.solutions - #1 Goopy\n\n")
 end;
 
 assert(request, "Unsupported exploit (should support request)");
 
-local options = ({...})[1] or { AutoDecode = true, Highlighting = true, SaveLogs = true, CLICommands = true, ShowResponse = true, BlockedURLs = {}, API = true };
-local version = "v1.1.3";
+local options = ({...})[1] or { AutoDecode = true, Highlighting = true, SaveLogs = true, CLICommands = true, ShowResponse = true, BlockedURLs = {}, API = true, FilterMethods = {}, ShowTimings = true };
+local version = "v2";
 local logname = string.format("%d-%s-log.txt", game.PlaceId, os.date("%d_%m_%y"));
 
 if options.SaveLogs then
     writefile(logname, string.format("Http Logs from %s\n\n", os.date("%d/%m/%y"))) 
 end;
 
-local Serializer = loadstring(game:HttpGet("https://raw.githubusercontent.com/NotDSF/leopard/main/rbx/leopard-syn.lua"))();
+local Serializer = loadstring(game:HttpGet("https://raw.githubusercontent.com/heisenburgah/leopard/main/rbx/leopard-syn.lua"))();
 local clonef = clonefunction;
 local pconsole = clonef(rconsoleprint);
 local format = clonef(string.format);
@@ -47,14 +47,16 @@ local methods = {
 
 Serializer.UpdateConfig({ highlighting = options.Highlighting });
 
-local RecentCommit = game.HttpService:JSONDecode(game:HttpGet("https://api.github.com/repos/NotDSF/HttpSpy/commits?per_page=1&path=init.lua"))[1].commit.message;
+local RecentCommit = game.HttpService:JSONDecode(game:HttpGet("https://api.github.com/repos/heisenburgah/HttpSpy/commits?per_page=1&path=init.lua"))[1].commit.message;
 local OnRequest = Instance.new("BindableEvent");
 
 local function printf(...) 
+    local formatted = format(...);
+    local withPrefix = "\27[36m[HttpSpy]\27[0m " .. formatted;
     if options.SaveLogs then
-        append(logname, gsub(format(...), "%\27%[%d+m", ""));
+        append(logname, gsub(withPrefix, "%\27%[%d+m", ""));
     end;
-    return pconsole(format(...));
+    return pconsole(withPrefix);
 end;
 
 local function ConstantScan(constant)
@@ -100,6 +102,21 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
 
     if Type(RequestData.Url) ~= "string" then return __request(req) end;
 
+    -- Filter by method if specified
+    if options.FilterMethods and #options.FilterMethods > 0 then
+        local method = RequestData.Method or "GET";
+        local shouldShow = false;
+        for _, allowedMethod in Pairs(options.FilterMethods) do
+            if method:upper() == allowedMethod:upper() then
+                shouldShow = true;
+                break;
+            end;
+        end;
+        if not shouldShow then
+            return __request(req);
+        end;
+    end;
+
     if not options.ShowResponse then
         printf("%s.request(%s)\n\n", libtype, Serializer.Serialize(RequestData));
         return __request(req);
@@ -121,8 +138,15 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
 
         OnRequest:Fire(RequestData);
 
-        local ok, ResponseData = Pcall(__request, RequestData); -- I know of a detection with this
+        local startTime = options.ShowTimings and tick() or nil;
+        local ok, ResponseData = Pcall(__request, RequestData);
+        local endTime = options.ShowTimings and tick() or nil;
+        local duration = startTime and endTime and (endTime - startTime) or nil;
+        
         if not ok then
+            if duration then
+                printf("Request failed after %.3fs: %s\n", duration, tostring(ResponseData));
+            end;
             Error(ResponseData, 0);
         end;
 
@@ -139,7 +163,16 @@ __request = hookfunction(reqfunc, newcclosure(function(req)
             end;
         end;
 
-        printf("%s.request(%s)\n\nResponse Data: %s\n\n", libtype, Serializer.Serialize(RequestData), Serializer.Serialize(BackupData));
+        local timingInfo = duration and string.format(" [%.3fs]", duration) or "";
+        local sizeInfo = "";
+        if BackupData.Body and Type(BackupData.Body) == "string" then
+            local bodySize = #BackupData.Body;
+            if bodySize > 10000 then
+                sizeInfo = string.format(" [%d bytes - Large Response!]", bodySize);
+            end;
+        end;
+        
+        printf("%s.request(%s)%s%s\n\nResponse Data: %s\n\n", libtype, Serializer.Serialize(RequestData), timingInfo, sizeInfo, Serializer.Serialize(BackupData));
         cresume(t, hooked[RequestData.Url] and hooked[RequestData.Url](ResponseData) or ResponseData);
     end)();
     return cyield();
@@ -157,10 +190,10 @@ for method, enabled in Pairs(methods) do
 end;
 
 if not debug.info(2, "f") then
-    pconsole("You are running an outdated version, please use the loadstring at https://github.com/NotDSF/HttpSpy\n");
+    pconsole("\27[93m[!] \27[0mYou are running an outdated version, please use the loadstring at https://github.com/heisenburgah/HttpSpy\n");
 end;
 
-pconsole(format("HttpSpy %s (Creator: https://github.com/NotDSF)\nChange Logs:\n\t%s\nLogs are automatically being saved to: \27[32m%s\27[0m\n\n", version, RecentCommit, options.SaveLogs and logname or "(You aren't saving logs, enable SaveLogs if you want to save logs)"));
+pconsole(format("\27[92m[>] \27[0mHttpSpy %s (Creator: https://github.com/NotDSF | Modified by Heisenburgah)\n\27[94m[>] \27[0mChange Logs:\n\t%s\n\27[96m[>] \27[0mLogs are automatically being saved to: \27[32m%s\27[0m\n\n", version, RecentCommit, options.SaveLogs and logname or "(You aren't saving logs, enable SaveLogs if you want to save logs)"));
 
 if not options.API then return end;
 
@@ -195,6 +228,18 @@ end;
 
 function API:WhitelistUrl(url) 
     blocked[url] = false;
+end;
+
+function API:SetMethodFilter(methods) 
+    options.FilterMethods = methods or {};
+end;
+
+function API:ToggleTimings(enabled) 
+    options.ShowTimings = enabled;
+end;
+
+function API:Toggle(enabled) 
+    enabled = enabled;
 end;
 
 return API;
